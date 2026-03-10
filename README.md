@@ -83,6 +83,5 @@ The system is containerized using Docker and deployed on AWS EC2 using Docker Co
 Each service runs in its own container, enabling independent scaling and fault isolation.
 
 **Author**
-
 Shyam Sundra Rao
 Java Backend Developer
