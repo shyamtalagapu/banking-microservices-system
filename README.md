@@ -77,6 +77,8 @@ Request Body
   "toAccountId": 2,
   "amount": 500
 }
+
+
 **Deployment**
 
 The system is containerized using Docker and deployed on AWS EC2 using Docker Compose.
