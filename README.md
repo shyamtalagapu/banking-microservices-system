@@ -5,7 +5,7 @@ with Saga-based transaction orchestration, service discovery, API gateway routin
 and resilience mechanisms.
 
 The application is containerized using Docker and deployed on AWS EC2.
-
+ 
 **Architecture Overview**
 The system is built using a microservices architecture where each service is independently deployed and communicates via REST APIs.
 
@@ -49,21 +49,22 @@ AWS EC2
 
 **Running the Project**
 Clone the repository
-git clone https://github.com/YOUR_USERNAME/banking-microservices.git
+git clone https://github.com/shyamtalagapu/banking-microservices.git
 cd banking-microservices
 
 **Start all services**
 docker compose up -d
 
-Verify Services
+**Verify Services**
 Eureka Dashboard
 http://localhost:8761
 
 API Gateway
 
 http://localhost:8085
-Example API
-Money Transfer
+
+**Example API**
+**Money Transfer**
 
 Endpoint
 
@@ -76,12 +77,12 @@ Request Body
   "toAccountId": 2,
   "amount": 500
 }
-Deployment
+**Deployment**
 
 The system is containerized using Docker and deployed on AWS EC2 using Docker Compose.
 Each service runs in its own container, enabling independent scaling and fault isolation.
 
-Author
+**Author**
 
 Shyam Sundra Rao
 Java Backend Developer
