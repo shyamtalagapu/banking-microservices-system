@@ -1,89 +1,200 @@
-**Distributed Banking Microservices System**
-A cloud-deployed distributed banking backend built using Spring Boot microservices. 
-The system supports customer management, account operations, and money transfers 
-with Saga-based transaction orchestration, service discovery, API gateway routing, 
-and resilience mechanisms.
-
-The application is containerized using Docker and deployed on AWS EC2.
- 
-**Architecture Overview**
-The system is built using a microservices architecture where each service is independently deployed and communicates via REST APIs.
 
 
+# Distributed Banking Microservices System
 
-**Tech Stack
-Backend**
+A cloud-ready backend system simulating real-world banking operations such as customer management, account handling, and money transfers using **Spring Boot Microservices Architecture**.
 
-Java
-Spring Boot
-Spring Data JPA
-Hibernate
-REST APIs
+---
 
-**Microservices Infrastructure**
-Spring Cloud
-Netflix Eureka (Service Discovery)
+##  Overview
+
+This project demonstrates how modern financial systems handle:
+
+* Distributed transactions across services
+* Data consistency using Saga pattern
+* Service-to-service communication
+* Fault tolerance and resilience
+* Containerized cloud deployment using Docker
+
+The system is fully deployed on a cloud VM using Docker and Docker Compose.
+
+---
+
+## Architecture
+
+
+            Client  -->  API Gateway -----------------------------------------
+                                       |               |                |
+                                    Customer         Account        Transaction
+                                     Service         Service          Service
+                                         |              |              |
+                                         --------------------------------
+                                                       |
+                                                     MySQL
+
+##  Tech Stack
+
+* **Language:** Java
+* **Frameworks:** Spring Boot, Spring Cloud
+* **Architecture:** Microservices
+* **Service Discovery:** Eureka
+* **API Gateway:** Spring Cloud Gateway
+* **Resilience:** Resilience4j (Circuit Breaker)
+* **Database:** MySQL
+* **ORM:** Hibernate / JPA
+* **Containerization:** Docker, Docker Compose
+* **Deployment:** AWS EC2 (Cloud VM)
+
+---
+
+##  Microservices
+
+| Service             | Responsibility                        |
+| ------------------- | ------------------------------------- |
+| Customer Service    | Manage customer data                  |
+| Account Service     | Handle account operations & balance   |
+| Transaction Service | Maintain transaction history (ledger) |
+| API Gateway         | Entry point for all client requests   |
+| Discovery Server    | Service registry (Eureka)             |
+
+---
+
+##  Key Features
+
+###  Saga Pattern (Distributed Transactions)
+
+Ensures consistency across multiple services during money transfer.
+
+```
+Transfer Flow:
+1. Create PENDING transaction
+2. Debit sender account
+3. Credit receiver account
+4. Mark transaction SUCCESS
+
+Failure:
+→ Compensation triggered → rollback debit
+
+
+---
+
+### Service Discovery (Eureka)
+
+* Services dynamically register themselves
+* No hardcoded service URLs
+* Enables scalability and flexibility
+
+---
+
+###  API Gateway
+
+* Centralized routing
+* Single entry point for all APIs
+* Decouples clients from internal services
+
+---
+
+###  Circuit Breaker (Resilience4j)
+
+* Prevents cascading failures
+* Provides fallback responses
+* Improves system reliability
+
+---
+
+###  Concurrency Handling
+
+* Implemented **Pessimistic Locking**
+* Ensures safe balance updates during concurrent transactions
+
+---
+
+###  Docker-Based Deployment
+
+* Each microservice runs in its own container
+* Docker Compose orchestrates the entire system
+* Services communicate via internal Docker network
+* Images are pushed to Docker Hub and pulled on EC2
+
+---
+
+##  Money Transfer Flow
+
+Client Request
+     ↓
 API Gateway
-Saga Pattern (Distributed Transactions)
-Resilience4j (Circuit Breaker)
+     ↓
+Account Service
+     ↓
+Transaction Service (create PENDING)
+     ↓
+Debit Sender Account
+     ↓
+Credit Receiver Account
+     ↓
+Transaction marked SUCCESS
+```
+
+If failure occurs:
+→ Compensation triggered
+→ Transaction marked FAILED
+→ Debit reversed
 
 
-**Database**
-MySQL
+---
 
-**DevOps & Deploymen**t
-Docker
-Docker Compose
-AWS EC2
+## Running the Project
 
-**Key Features**
--Microservices-based banking backend with independent services
--Distributed transaction management using Saga Pattern
--Service discovery using Netflix Eureka
--Centralized routing through API Gateway
--Fault tolerance using Resilience4j Circuit Breaker
--Concurrent transaction safety using pessimistic locking
--Accurate financial operations using BigDecimal
--Containerized deployment using Docker
+### 1)Pull Docker Images
 
+docker compose pull
+---
 
-**Running the Project**
-Clone the repository
-git clone https://github.com/shyamtalagapu/banking-microservices.git
-cd banking-microservices
+### 2) Start All Services
 
-**Start all services**
 docker compose up -d
 
-**Verify Services**
-Eureka Dashboard
-http://localhost:8761
+---
 
-API Gateway
+### 3) Access Services
 
-http://localhost:8085
-
-**Example API**
-**Money Transfer**
-
-Endpoint
-
-POST /accounts/transferMoney
-
-Request Body
-
-{
-  "fromAccountId": 1,
-  "toAccountId": 2,
-  "amount": 500
-}
+* Eureka Dashboard → `http://16.171.144.117:8761
+* API Gateway → `http://16.171.144.117:8085
 
 
-**Deployment**
+---
 
-The system is containerized using Docker and deployed on AWS EC2 using Docker Compose.
-Each service runs in its own container, enabling independent scaling and fault isolation.
+##  Highlights
 
-**Author**
-Shyam Sundra Rao
+* Designed a distributed banking system using microservices
+* Implemented Saga pattern for data consistency
+* Applied Circuit Breaker for fault tolerance
+* Ensured data integrity using locking mechanisms
+* Deployed complete system using Docker on AWS EC2
+
+---
+
+##  Docker Hub Images
+
+* shyamtalagapu/customer-service
+* shyamtalagapu/account-service
+* shyamtalagapu/transactiondetails-service
+* shyamtalagapu/api-gateway
+* shyamtalagapu/discovery-server
+
+---
+
+##  Future Enhancements
+
+* Kafka-based asynchronous communication
+* Distributed logging & monitoring
+* CI/CD pipeline integration
+* Implement System Design concepts 
+
+
+Author
+
+Shyam Sundra Rao 
+
+
 Java Backend Developer
