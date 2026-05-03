@@ -1,0 +1,73 @@
+services:
+
+  mysql:
+    image: mysql:8
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    networks:
+      - banking-network
+
+  discovery-server:
+    build: ./discovery-server
+    container_name: discovery-server
+    ports:
+      - "8761:8761"
+    networks:
+      - banking-network
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8085:8085"
+    depends_on:
+      - discovery-server
+    networks:
+      - banking-network
+
+  customer-service:
+    build: ./customer-service
+    container_name: customer-service
+    depends_on:
+      - mysql
+      - discovery-server
+    networks:
+      - banking-network
+
+  account-service:
+    build: ./accounts-service
+    container_name: accounts-service
+    depends_on:
+      - mysql
+      - discovery-server
+    networks:
+      - banking-network
+
+  transactiondetails-service:
+    build: ./transactiondetails-service
+    container_name: transactiondetails-service
+    depends_on:
+      - mysql
+      - discovery-server
+    networks:
+      - banking-network
+      
+      
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    depends_on:
+      - mysql
+      - discovery-server
+    networks:
+      - banking-network
+      
+   
+
+networks:
+  banking-network:
