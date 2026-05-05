@@ -1,9 +1,16 @@
-FROM eclipse-temurin:17-jdk-alpine
+#Smaller images and faster setup
+FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 
-COPY target/customer-service-0.0.1-SNAPSHOT.jar app.jar
+#Copying Jar dynamivally (No hardcoding)
+#Work with any target no CI/CD Break
+COPY target/*.jar app.jar
+
+#JVM Mmeory Tuning (MEMORY )
+#Memory Control initial and max memory specifying
+ENV JAVA_OPTS="-Xms128m -Xmx512m"
 
 EXPOSE 8080
 
-ENTRYPOINT ["java","-jar","app.jar"]
+ENTRYPOINT ["sh","-c","java ${JAVA_OPTS} -jar /app/app.jar"]

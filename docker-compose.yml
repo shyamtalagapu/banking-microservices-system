@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
 
   mysql:
@@ -16,7 +18,7 @@ services:
     build: ./discovery-server
     container_name: discovery-server
     ports:
-      - "8761:8761"
+      - "8761:8080"
     networks:
       - banking-network
 
@@ -24,7 +26,7 @@ services:
     build: ./api-gateway
     container_name: api-gateway
     ports:
-      - "8085:8085"
+      - "8085:8080"
     depends_on:
       - discovery-server
     networks:
@@ -33,6 +35,8 @@ services:
   customer-service:
     build: ./customer-service
     container_name: customer-service
+    ports:
+      - "8080:8080"
     depends_on:
       - mysql
       - discovery-server
@@ -42,6 +46,8 @@ services:
   account-service:
     build: ./accounts-service
     container_name: accounts-service
+    ports:
+      - "8081:8080"
     depends_on:
       - mysql
       - discovery-server
@@ -51,6 +57,8 @@ services:
   transactiondetails-service:
     build: ./transactiondetails-service
     container_name: transactiondetails-service
+    ports:
+      - "8082:8080"
     depends_on:
       - mysql
       - discovery-server
@@ -61,6 +69,8 @@ services:
   auth-service:
     build: ./auth-service
     container_name: auth-service
+    ports:
+      - "8083:8080"
     depends_on:
       - mysql
       - discovery-server
