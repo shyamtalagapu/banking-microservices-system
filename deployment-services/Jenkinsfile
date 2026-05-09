@@ -33,17 +33,19 @@ pipeline {
                 bat 'mvn clean install'
             }
         }
-        stage('Veriy Docker'){
+        stage('Verify Docker'){
              steps {
                 bat 'docker --version'
             }
         }
-		stage('Build Auth Service Docker Image') {
-		    steps {
-		        dir('auth-service') {
-		            bat 'dir'
-		            bat 'docker build -t auth-service:v1 .'
-		        }
+		stage('Stop existing docker Containers'){
+		    steps{
+		        bat 'docker compose down'
+		    }
+		}
+		stage('Build Containers and deploy banking microservices'){
+		    steps{
+		        bat 'docker compose up -d'
 		    }
 		}
     }

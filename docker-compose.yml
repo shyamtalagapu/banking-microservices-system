@@ -25,6 +25,7 @@ services:
       
 
   discovery-server:
+    image: discovery-server:v1
     build: ./discovery-server
     container_name: discovery-server
     ports:
@@ -33,6 +34,7 @@ services:
       - banking-network
 
   api-gateway:
+    image: api-gateway:v1
     build: ./api-gateway
     container_name: api-gateway
     ports:
@@ -46,6 +48,7 @@ services:
       - banking-network
 
   auth-service:
+    image: auth-service:v1
     build: ./auth-service
     container_name: auth-service
     ports:
@@ -61,6 +64,7 @@ services:
       - banking-network
 
   customer-service:
+    image: customer-service:v1
     build: ./customer-service
     container_name: customer-service
     ports:
@@ -76,6 +80,7 @@ services:
       - banking-network
 
   account-service:
+    image: account-service:v1
     build: ./accounts-service
     container_name: accounts-service
     ports:
@@ -91,6 +96,7 @@ services:
       - banking-network
 
   transactiondetails-service:
+    image: transaction-details:v1
     build: ./transactiondetails-service
     container_name: transactiondetails-service
     ports:
