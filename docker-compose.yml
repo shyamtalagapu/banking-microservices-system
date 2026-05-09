@@ -7,18 +7,28 @@ services:
     container_name: mysql
     environment:
       MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: userdetails
+      MYSQL_ROOT_HOST: '%'
     ports:
       - "3307:3306"
     volumes:
-      - ./mysql-init:/docker-entrypoint-initdb.d
+      - ./mysql-init:/docker-entrypoint-initdb.d   # ✅ init.sql runs on first boot
+      - mysql-data:/var/lib/mysql
     networks:
       - banking-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+      
 
   discovery-server:
     build: ./discovery-server
     container_name: discovery-server
     ports:
-      - "8761:8080"
+      - "8761:8761"
     networks:
       - banking-network
 
@@ -26,9 +36,27 @@ services:
     build: ./api-gateway
     container_name: api-gateway
     ports:
-      - "8085:8080"
+      - "8085:8085"
     depends_on:
-      - discovery-server
+      discovery-server:
+        condition: service_started
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    networks:
+      - banking-network
+
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    ports:
+      - "8083:8083"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
     networks:
       - banking-network
 
@@ -38,8 +66,12 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - mysql
-      - discovery-server
+      mysql:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
     networks:
       - banking-network
 
@@ -47,10 +79,14 @@ services:
     build: ./accounts-service
     container_name: accounts-service
     ports:
-      - "8081:8080"
+      - "8081:8081"
     depends_on:
-      - mysql
-      - discovery-server
+      mysql:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
     networks:
       - banking-network
 
@@ -58,26 +94,20 @@ services:
     build: ./transactiondetails-service
     container_name: transactiondetails-service
     ports:
-      - "8082:8080"
+      - "8082:8082"
     depends_on:
-      - mysql
-      - discovery-server
+      mysql:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
     networks:
       - banking-network
-      
-      
-  auth-service:
-    build: ./auth-service
-    container_name: auth-service
-    ports:
-      - "8083:8080"
-    depends_on:
-      - mysql
-      - discovery-server
-    networks:
-      - banking-network
-      
-   
 
 networks:
   banking-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
