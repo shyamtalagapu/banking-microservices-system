@@ -38,11 +38,13 @@ pipeline {
                 bat 'docker --version'
             }
         }
-        stage('Build Docker Image for Auth Service'){
-             steps {
-                bat 'docker build -t auth-service:v1 .'
-            }
-        }
-
+		stage('Build Auth Service Docker Image') {
+		    steps {
+		        dir('auth-service') {
+		            bat 'dir'
+		            bat 'docker build -t auth-service:v1 .'
+		        }
+		    }
+		}
     }
 }
