@@ -3,7 +3,7 @@ pipeline {
     agent any
 
     tools {
-        jdk 'JDK21'
+        jdk 'JDK17'
         maven 'Maven3'
     }
 
@@ -25,6 +25,12 @@ pipeline {
         stage('Verify Maven') {
             steps {
                 bat 'mvn -version'
+            }
+        }
+
+        stage('Build Microservices') {
+            steps {
+                bat 'mvn clean install'
             }
         }
 
