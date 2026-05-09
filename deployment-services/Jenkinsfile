@@ -38,10 +38,10 @@ pipeline {
                 bat 'docker --version'
             }
         }
-		stage('Stop existing docker Containers'){
-		    steps{
-		        bat 'docker compose down'
-		    }
+		stage('Clean Existing Containers') {
+	    steps {
+	        bat 'docker-compose down || exit 0'
+	    }
 		}
 		stage('Build Containers and deploy banking microservices'){
 		    steps{
