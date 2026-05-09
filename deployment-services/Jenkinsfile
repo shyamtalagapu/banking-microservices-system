@@ -33,6 +33,11 @@ pipeline {
                 bat 'mvn clean install'
             }
         }
+        stage('Veriy Docker'){
+             steps {
+                bat 'docker --version'
+            }
+        }
 
     }
 }
