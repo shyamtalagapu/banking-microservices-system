@@ -17,7 +17,7 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ApiErrorrResponse> handleUserNotFound(UserNotFoundException exception,
 			HttpServletRequest httpServletRequest){
 		ApiErrorrResponse apiErrorrRespon= new ApiErrorrResponse(
-				HttpStatus.NOT_FOUND.value(), "User Not Found",  exception.getMessage(), httpServletRequest.getRequestURI());
+				HttpStatus.NOT_FOUND.value(), "User Not Found ",  exception.getMessage(), httpServletRequest.getRequestURI());
 		return new ResponseEntity<>(apiErrorrRespon,HttpStatus.NOT_FOUND);
 		
 	}
