@@ -38,11 +38,22 @@ pipeline {
                 bat 'docker --version'
             }
         }
+        stage('Docker Compose Build'){
+         steps {
+          bat 'docker compose build' 
+          }
+         }
+        
+         stage('Docker Compose Push') { 
+         steps{
+           bat 'docker compose push' 
+           }
+        }
 		stage('Clean Existing Containers') {
 	    steps {
 	        bat 'docker-compose down || exit 0'
 	    }
-		}
+	}
 		stage('Build Containers and deploy banking microservices'){
 		    steps{
 		        bat 'docker compose up -d'
