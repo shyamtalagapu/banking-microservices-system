@@ -9,7 +9,7 @@ COPY target/*.jar app.jar
 
 #JVM Mmeory Tuning (MEMORY )
 #Memory Control initial and max memory specifying
-ENV JAVA_OPTS="-Xms128m -Xmx512m"
+ENV JAVA_OPTS="-Xms32m -Xmx128m"
 
 EXPOSE 8082
 
