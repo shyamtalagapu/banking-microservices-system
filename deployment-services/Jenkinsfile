@@ -1,77 +1,104 @@
+```groovy
 pipeline {
 
-    agent any  
+    agent any
 
     tools {
         jdk 'JDK17'
         maven 'Maven3'
     }
 
-
     stages {
 
         stage('Checkout Code') {
+
             steps {
+
                 git branch: 'main',
                 url: 'https://github.com/shyamtalagapu/banking-microservices-system.git'
             }
         }
 
         stage('Verify Java') {
+
             steps {
+
                 bat 'java -version'
             }
         }
 
         stage('Verify Maven') {
+
             steps {
+
                 bat 'mvn -version'
             }
         }
 
         stage('Build Microservices') {
+
             steps {
+
                 bat 'mvn clean install'
             }
         }
-        stage('Verify Docker'){
-             steps {
+
+        stage('Verify Docker') {
+
+            steps {
+
                 bat 'docker --version'
             }
         }
-        stage('Docker Compose Build'){
-         steps {
-          bat 'docker compose build' 
-          }
-         }
-        
-         stage('Docker Compose Push') { 
-         steps{
-           bat 'docker compose push' 
-           }
+
+        stage('Docker Compose Build') {
+
+            steps {
+
+                bat 'docker compose build'
+            }
         }
-		stage('Clean Existing Containers') {
-	    steps {
-	        bat 'docker-compose down || exit 0'
-	    }
-	  }
-		stage('Build Containers and deploy banking microservices'){
-		    steps{
-		        bat 'docker compose up -d'
-		    }
-		}
-		stage('Deploy to AWS EC2'){
-		    steps{
-		     sshagent(credentials: ['aws-ec2-key']) {
-		       sh '''
-		          ssh =o StrictHostKeyChecking= no ubuntu@13.60.203.250 
-		          "cd banking-microservices-system &&
-		          docker compose pull &&
-		          docker compose down &&
-		          docker compose up -d"
-		          '''
-		      
-		    }
-		}
+
+        stage('Docker Compose Push') {
+
+            steps {
+
+                bat 'docker compose push'
+            }
+        }
+
+        stage('Clean Existing Containers') {
+
+            steps {
+
+                bat 'docker compose down || exit 0'
+            }
+        }
+
+        stage('Deploy Banking Microservices Locally') {
+
+            steps {
+
+                bat 'docker compose up -d'
+            }
+        }
+
+        stage('Deploy to AWS EC2') {
+
+            steps {
+
+                sshagent(credentials: ['aws-ec2-key']) {
+
+                    bat '''
+                        ssh -o StrictHostKeyChecking=no ubuntu@13.60.203.250 ^
+                        "cd banking-microservices-system && ^
+                        docker compose pull && ^
+                        docker compose down && ^
+                        docker compose up -d"
+                    '''
+                }
+            }
+        }
     }
 }
+```
