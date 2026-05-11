@@ -53,10 +53,23 @@ pipeline {
 	    steps {
 	        bat 'docker-compose down || exit 0'
 	    }
-	}
+	  }
 		stage('Build Containers and deploy banking microservices'){
 		    steps{
 		        bat 'docker compose up -d'
+		    }
+		}
+		stage('Deploy to AWS EC2'){
+		    steps{
+		     sshagent(credentials: ['aws-ec2-key']) {
+		       sh '''
+		          ssh =o StrictHostKeyChecking= no ubuntu@13.60.203.250 
+		          "cd banking-microservices-system &&
+		          docker compose pull &&
+		          docker compose down &&
+		          docker compose up -d"
+		          '''
+		      
 		    }
 		}
     }
