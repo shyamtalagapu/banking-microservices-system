@@ -61,7 +61,7 @@ pipeline {
 		}
 		stage('Deploy to AWS EC2'){
 		    steps{
-		     sshagent(credentials: ['aws-ec2-key']) {
+		      sshagent(credentials: ['aws-ec2-key']) {
 		       sh '''
 		          ssh =o StrictHostKeyChecking= no ubuntu@13.60.203.250 
 		          "cd banking-microservices-system &&
