@@ -82,22 +82,19 @@ pipeline {
             }
         }
 
-        stage('Deploy to AWS EC2') {
+		stage('Deploy to AWS EC2') {
+		 steps {
 
-            steps {
-
-                 sshagent(credentials: ['aws-ec2-key']) {
-
-                    bat '''
-                        ssh -o StrictHostKeyChecking=no ubuntu@13.60.203.250 ^
-                        "cd banking-microservices-system && ^
-                        docker compose pull && ^
-                        docker compose down && ^
-                        docker compose up -d"
-                    '''
-                }
-            }
-        }
+      		bat '''
+            ssh -i C:\\Downloads\\banking-key-new.pem -o StrictHostKeyChecking=no ubuntu@13.60.203.250 ^
+            "cd banking-microservices-system && ^
+            docker compose pull && ^
+            docker compose down && ^
+            docker compose up -d"
+        '''
+    }
+}
+        
     }
 }
 
