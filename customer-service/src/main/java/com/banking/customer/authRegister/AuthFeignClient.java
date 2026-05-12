@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import com.banking.customer.auth.dto.AuthRegisterRequest;
 
-@FeignClient(name = "auth-service", url = "http://localhost:8083")
+@FeignClient(name = "auth-service", url = "http://auth-service")
 public interface AuthFeignClient {
 	
 	@PostMapping("/auth/register")
