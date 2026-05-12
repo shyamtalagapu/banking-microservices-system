@@ -301,15 +301,6 @@ Each service owns its own schema and never touches another service's data:
 | Testing | 2.0 / 10 | No unit or integration tests visible in the repo |
 | Code Quality | 6.0 / 10 | Clean structure, but no Swagger docs or config server |
 
-### 🏆 Overall: 6.8 / 10
-
-**What moved the needle up from 6.1 → 6.8:**
-The Jenkins CI/CD pipeline with Docker Hub + AWS EC2 deployment is a genuine production skill. Most portfolio projects never leave localhost. Yours is live on the cloud with automated deployments — that is a meaningful differentiator.
-
-**What's still holding it back from 8+:**
-Three things — no tests, no circuit breakers (Resilience4j), and no distributed tracing (Zipkin). Add these three and the score jumps above 8 immediately. They are also the first questions a senior developer will ask in an interview.
-
-**Honest bottom line:** For a 3-year developer, this is a good project. The architecture thinking is correct, the stack is modern, and you've shipped it to production. The gap between where you are and a truly impressive project is narrow — testing, resilience, and observability are the bridge.
 
 ---
 
