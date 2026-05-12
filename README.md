@@ -436,7 +436,6 @@ Placing SQL scripts in `mysql-init/` means Docker mounts them as `docker-entrypo
 
 The following enhancements are planned to evolve this into a fully production-grade system:
 
-- [ ] **Resilience4j Circuit Breakers** — Prevent cascade failures when a service is slow or down
 - [ ] **Spring Cloud Config Server** — Centralized configuration management backed by Git
 - [ ] **Micrometer + Zipkin** — Distributed tracing to follow requests across all services
 - [ ] **Apache Kafka** — Event-driven transaction processing (replace synchronous REST for txns)
