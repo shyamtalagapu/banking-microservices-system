@@ -1,21 +1,14 @@
 # 🏦 Banking Microservices System
 
-<div align="center">
+![Java](https://img.shields.io/badge/Java-17-ED8B00?style=flat-square&logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2.5-6DB33F?style=flat-square&logo=springboot&logoColor=white)
+![Spring Cloud](https://img.shields.io/badge/Spring_Cloud-2023.0.1-6DB33F?style=flat-square&logo=spring&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=flat-square&logo=mysql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)
+![Jenkins](https://img.shields.io/badge/Jenkins-CI%2FCD-D24939?style=flat-square&logo=jenkins&logoColor=white)
+![AWS EC2](https://img.shields.io/badge/AWS-EC2-FF9900?style=flat-square&logo=amazonec2&logoColor=white)
 
-![Java](https://img.shields.io/badge/Java-17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
-![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2.5-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white)
-![Spring Cloud](https://img.shields.io/badge/Spring_Cloud-2023.0.1-6DB33F?style=for-the-badge&logo=spring&logoColor=white)
-![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-![Maven](https://img.shields.io/badge/Maven-Multi--Module-C71A36?style=for-the-badge&logo=apache-maven&logoColor=white)
-
-**A production-inspired, cloud-native banking backend built with Spring Boot 3 microservices.**  
-Covers customer management, account operations, transaction processing, JWT-based authentication,  
-service discovery, API gateway routing — all containerized with Docker Compose.
-
-[Architecture](#-architecture) • [Services](#-microservices) • [Quick Start](#-quick-start) • [API Reference](#-api-reference) • [Tech Stack](#-tech-stack)
-
-</div>
+A cloud-native banking backend built with **Spring Boot 3 Microservices**, fully containerized with Docker, and **automatically deployed to AWS EC2 via a Jenkins CI/CD pipeline**. The system handles customer management, bank accounts, transactions, and JWT-based authentication — all behind a single API Gateway.
 
 ---
 
@@ -24,116 +17,117 @@ service discovery, API gateway routing — all containerized with Docker Compose
 - [Architecture](#-architecture)
 - [Microservices](#-microservices)
 - [Tech Stack](#-tech-stack)
+- [CI/CD Pipeline](#-cicd-pipeline)
 - [Project Structure](#-project-structure)
-- [Quick Start](#-quick-start)
-- [Running with Docker](#-running-with-docker)
-- [API Reference](#-api-reference)
-- [Service Ports & Access Points](#-service-ports--access-points)
-- [Database Schema](#-database-schema)
-- [Key Design Decisions](#-key-design-decisions)
-- [Author](#-author)
+- [How to Run Locally](#-how-to-run-locally)
+- [API Endpoints](#-api-endpoints)
+- [Database](#-database)
+- [Project Rating](#-project-rating)
 
 ---
 
 ## 🏗️ Architecture
 
-All client requests enter through a **single API Gateway** on port `8085`. The gateway validates JWT tokens and routes requests to downstream services discovered dynamically via **Netflix Eureka**. All services share a dedicated **Docker bridge network** (`banking-network`) and a single **MySQL 8** instance with isolated schemas per service.
+Every request enters through the **API Gateway** — the single public-facing port. The gateway validates the JWT token and routes the request to the correct service, which it discovers dynamically from **Eureka** (the service registry). All services and the database sit inside a private **Docker network**.
 
 ```
-                        ┌─────────────────────────────────┐
-                        │        CLIENT / POSTMAN          │
-                        └──────────────┬──────────────────┘
-                                       │ HTTP (Port 8085)
-                                       ▼
-                        ┌─────────────────────────────────┐
-                        │           API GATEWAY            │
-                        │     Spring Cloud Gateway         │
-                        │  • JWT Token Validation          │
-                        │  • Route-based Forwarding        │
-                        │  • Load Balancing (Eureka)       │
-                        └──────────────┬──────────────────┘
-                                       │
-              ┌────────────────────────┼────────────────────────┐
-              │                        │                        │
-              ▼                        ▼                        ▼
-  ┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐
-  │   AUTH SERVICE     │  │  CUSTOMER SERVICE  │  │  ACCOUNTS SERVICE  │
-  │  JWT Generation    │  │  Profile CRUD      │  │  Account Mgmt      │
-  │  Login/Register    │  │  Customer Data     │  │  Balance Ops       │
-  └────────────────────┘  └────────────────────┘  └────────────────────┘
-                                                             │
-                                       ┌─────────────────────┘
-                                       │
-                          ┌────────────────────┐
-                          │ TRANSACTION SERVICE │
-                          │  Txn History        │
-                          │  Txn Details        │
-                          └────────────────────┘
-                                       │
-              ┌────────────────────────┼────────────────────────┐
-              │                        │                        │
-              ▼                        ▼                        ▼
-  ┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐
-  │  DISCOVERY SERVER  │  │    MySQL 8 DB       │  │  banking-network   │
-  │  Netflix Eureka    │  │  Port 3307:3306     │  │  Docker Bridge     │
-  │  Port 8761         │  │  Schema per service │  │  Isolated Network  │
-  └────────────────────┘  └────────────────────┘  └────────────────────┘
-```
-
-### Request Lifecycle
-
-```
-1.  Client sends HTTP request → API Gateway (8085)
-2.  Gateway checks Authorization: Bearer <JWT>
-3.  JWT valid → Gateway resolves service name via Eureka
-4.  Gateway forwards request to target microservice
-5.  Service processes request → reads/writes MySQL
-6.  Response returns through Gateway back to client
+Client
+  │
+  ▼
+API Gateway (:8085)        ← validates JWT, routes requests
+  │
+  ├──► Auth Service         ← login, register, issue JWT
+  ├──► Customer Service     ← manage customer profiles
+  ├──► Accounts Service     ← manage bank accounts
+  └──► Transaction Service  ← record and query transactions
+            │
+            ▼
+     Discovery Server       ← Eureka: all services register here
+            │
+            ▼
+         MySQL 8             ← each service has its own schema
 ```
 
 ---
 
 ## 🧩 Microservices
 
-| # | Service | Responsibility | Port |
-|---|---|---|---|
-| 1 | **API Gateway** | Single entry point — JWT validation, route forwarding, load balancing | `8085` |
-| 2 | **Discovery Server** | Netflix Eureka — service registry, dynamic discovery, health monitoring | `8761` |
-| 3 | **Auth Service** | User registration, login, JWT token issuance and validation | Dynamic |
-| 4 | **Customer Service** | Customer profile creation, retrieval, update, deletion | Dynamic |
-| 5 | **Accounts Service** | Bank account creation, balance queries, account management | Dynamic |
-| 6 | **Transaction Service** | Transaction recording, history queries, transaction details | Dynamic |
-| 7 | **MySQL Init** | Auto-creates all database schemas and tables on first startup | — |
+| Service | What It Does | Port |
+|---|---|---|
+| **API Gateway** | Entry point for all requests — JWT validation + routing | `8085` |
+| **Discovery Server** | Eureka service registry — tracks all running services | `8761` |
+| **Auth Service** | Register users, login, generate and validate JWT tokens | Dynamic |
+| **Customer Service** | Create, read, update, delete customer profiles | Dynamic |
+| **Accounts Service** | Create and manage bank accounts | Dynamic |
+| **Transaction Service** | Record transactions and retrieve history | Dynamic |
 
-### Service Communication Flow
-
-```
-Auth Service       →  issues JWT tokens used by all other services
-API Gateway        →  validates JWT before forwarding to any service
-Customer Service   →  registers with Eureka, discovered by Gateway
-Accounts Service   →  registers with Eureka, can call Customer Service
-Transaction Svc    →  registers with Eureka, linked to Accounts Service
-All Services       →  share banking-network Docker bridge
-All Services       →  persist data to MySQL (isolated schemas)
-```
+> Business services don't have fixed ports. They register with Eureka on startup, and the Gateway finds them automatically by service name — no hardcoded URLs anywhere.
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Category | Technology | Purpose |
-|---|---|---|
-| **Language** | Java 17 | LTS version with modern features (records, sealed classes, text blocks) |
-| **Framework** | Spring Boot 3.2.5 | Auto-configuration, embedded server, production-ready defaults |
-| **Cloud** | Spring Cloud 2023.0.1 | Microservices patterns — discovery, gateway, config |
-| **Service Discovery** | Netflix Eureka | Dynamic service registration and discovery without hardcoded URLs |
-| **API Gateway** | Spring Cloud Gateway | Reactive gateway — routing, JWT filter, load balancing |
-| **Security** | Spring Security + JWT | Stateless auth — JWT issued by auth-service, validated at gateway |
-| **Database** | MySQL 8.0 | Relational persistence, one schema per microservice |
-| **ORM** | Spring Data JPA + Hibernate | Entity management, repositories, query generation |
-| **Build** | Maven Multi-Module | Centralized dependency management across all 6 services |
-| **Containerization** | Docker + Docker Compose | Each service has its own Dockerfile, orchestrated via Compose |
-| **Networking** | Docker Bridge Network | Isolated `banking-network` — services communicate by container name |
+| Category | Technology |
+|---|---|
+| Language | Java 17 |
+| Framework | Spring Boot 3.2.5 |
+| Microservices | Spring Cloud 2023.0.1 |
+| Service Discovery | Netflix Eureka |
+| API Gateway | Spring Cloud Gateway |
+| Authentication | Spring Security + JWT |
+| Database | MySQL 8.0 |
+| ORM | Spring Data JPA + Hibernate |
+| Build Tool | Maven (Multi-Module) |
+| Containerization | Docker + Docker Compose |
+| CI/CD | Jenkins |
+| Image Registry | Docker Hub |
+| Cloud Deployment | AWS EC2 |
+
+---
+
+## 🚀 CI/CD Pipeline
+
+Every `git push` to the `main` branch automatically triggers the Jenkins pipeline. No manual deployment steps — code goes from developer laptop to live AWS EC2 fully automated.
+
+```
+Developer pushes code to GitHub
+          │
+          ▼
+    Jenkins detects push
+          │
+    ┌─────▼──────────────────────────────┐
+    │ Stage 1: Checkout                  │
+    │   Pull latest code from GitHub     │
+    └─────┬──────────────────────────────┘
+          │
+    ┌─────▼──────────────────────────────┐
+    │ Stage 2: Maven Build               │
+    │   mvn clean package -DskipTests    │
+    │   Compiles all 6 services → JARs  │
+    └─────┬──────────────────────────────┘
+          │
+    ┌─────▼──────────────────────────────┐
+    │ Stage 3: Docker Build              │
+    │   Builds Docker image per service  │
+    └─────┬──────────────────────────────┘
+          │
+    ┌─────▼──────────────────────────────┐
+    │ Stage 4: Push to Docker Hub        │
+    │   Pushes all 6 images to registry  │
+    └─────┬──────────────────────────────┘
+          │
+    ┌─────▼──────────────────────────────┐
+    │ Stage 5: Deploy to AWS EC2         │
+    │   SSH into EC2                     │
+    │   docker-compose pull              │
+    │   docker-compose up -d             │
+    └─────┬──────────────────────────────┘
+          │
+          ▼
+   ✅ Application live on AWS EC2
+```
+
+The `Jenkinsfile` lives in the root of this repo — the pipeline definition is version-controlled alongside the application code.
 
 ---
 
@@ -142,324 +136,185 @@ All Services       →  persist data to MySQL (isolated schemas)
 ```
 banking-microservices-system/
 │
-├── 📂 accounts-service/              # Bank account management
-│   ├── src/main/java/                # Controllers, Services, Repositories, Entities
-│   ├── src/main/resources/           # application.properties
-│   ├── Dockerfile                    # Service container definition
-│   └── pom.xml                       # Service-level dependencies
+├── Jenkinsfile                      ← CI/CD pipeline (all 5 stages)
+├── docker-compose.yml               ← Runs all 7 containers together
+├── pom.xml                          ← Parent POM — shared versioning
 │
-├── 📂 api-gateway/                   # Centralized routing + JWT filter
-│   ├── src/main/java/                # Gateway filter, JWT validation logic
-│   ├── src/main/resources/           # Route config (application.yml)
-│   ├── Dockerfile
-│   └── pom.xml
+├── api-gateway/                     ← JWT filter + route config
+├── discovery-server/                ← Eureka server
+├── auth-service/                    ← Login, register, JWT
+├── customer-service/                ← Customer CRUD
+├── accounts-service/                ← Account management
+├── transactionDetails-service/      ← Transaction history
 │
-├── 📂 auth-service/                  # Authentication + JWT issuance
-│   ├── src/main/java/                # Auth controller, UserDetails, JWT util
-│   ├── src/main/resources/
-│   ├── Dockerfile
-│   └── pom.xml
-│
-├── 📂 customer-service/              # Customer profile management
-│   ├── src/main/java/
-│   ├── src/main/resources/
-│   ├── Dockerfile
-│   └── pom.xml
-│
-├── 📂 discovery-server/              # Eureka service registry
-│   ├── src/main/java/
-│   ├── src/main/resources/
-│   ├── Dockerfile
-│   └── pom.xml
-│
-├── 📂 transactionDetails-service/    # Transaction history + details
-│   ├── src/main/java/
-│   ├── src/main/resources/
-│   ├── Dockerfile
-│   └── pom.xml
-│
-├── 📂 mysql-init/                    # SQL scripts — auto-run on DB startup
-│   └── init.sql                      # Creates all schemas and tables
-│
-├── 🐳 docker-compose.yml             # Full system orchestration (7 containers)
-├── 📄 pom.xml                        # Parent POM — manages all module versions
-└── 📄 .gitignore                     # Excludes target/, *.jar, *.class
+└── mysql-init/
+    └── init.sql                     ← Auto-creates all DB schemas on startup
 ```
+
+Each service folder contains its own `Dockerfile`, `pom.xml`, and Spring Boot source code.
 
 ---
 
-## 🚀 Quick Start
+## 💻 How to Run Locally
 
-### Prerequisites
-
-| Tool | Minimum Version |
-|---|---|
-| Java | 17+ |
-| Maven | 3.8+ |
-| Docker Desktop | Latest |
-| Git | Any |
-
-### Clone and Run in 3 Steps
+**Prerequisites:** Java 17, Maven 3.8+, Docker Desktop
 
 ```bash
-# Step 1 — Clone the repository
+# 1. Clone the repo
 git clone https://github.com/shyamtalagapu/banking-microservices-system.git
 cd banking-microservices-system
 
-# Step 2 — Build all services
+# 2. Build all services
 mvn clean package -DskipTests
 
-# Step 3 — Launch everything with Docker Compose
+# 3. Start everything
 docker-compose up --build
 ```
 
-That's it. All 7 containers start automatically in the correct order.
+Once running:
+- API Gateway → `http://localhost:8085`
+- Eureka Dashboard → `http://localhost:8761`
+
+To stop: `docker-compose down`
 
 ---
 
-## 🐳 Running with Docker
+## 📡 API Endpoints
 
-### Start All Services
-
-```bash
-docker-compose up --build
-```
-
-### Run in Background (Detached Mode)
-
-```bash
-docker-compose up --build -d
-```
-
-### View Logs for a Specific Service
-
-```bash
-docker-compose logs -f accounts-service
-docker-compose logs -f api-gateway
-docker-compose logs -f auth-service
-```
-
-### Stop All Services
-
-```bash
-docker-compose down
-```
-
-### Stop and Remove Volumes (Full Reset)
-
-```bash
-docker-compose down -v
-```
-
-### Container Startup Order
-
-Docker Compose starts services in dependency order:
-
-```
-[1] MySQL 8          →  Database ready, schemas auto-created
-[2] Discovery Server →  Eureka starts, ready to accept registrations
-[3] API Gateway      →  Depends on Discovery Server
-[4] Auth Service     →  Depends on MySQL + Discovery Server
-[5] Customer Service →  Depends on MySQL + Discovery Server
-[6] Accounts Service →  Depends on MySQL + Discovery Server
-[7] Transaction Svc  →  Depends on MySQL + Discovery Server
-```
-
-All services register themselves with Eureka on startup. The API Gateway discovers them by service name — no hardcoded IPs anywhere.
-
----
-
-## 📡 API Reference
+All requests go through `http://localhost:8085`.  
+Every endpoint except login requires a JWT token in the header: `Authorization: Bearer <token>`
 
 ### Authentication
 
-Before calling any secured endpoint, obtain a JWT token:
+**Login**
+```
+POST /auth/login
 
-```http
-POST http://localhost:8085/auth/login
-Content-Type: application/json
-
+Request Body:
 {
-  "username": "your_username",
-  "password": "your_password"
+  "username": "admin",
+  "password": "password"
+}
+
+Response:
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9..."
 }
 ```
 
-**Response:**
-```json
+**Register**
+```
+POST /auth/register
+
+Request Body:
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "username": "john",
+  "password": "password123"
 }
 ```
 
-Use this token in all subsequent requests:
+---
+
+### Customer Service
+
 ```
-Authorization: Bearer <token>
-```
+POST   /customers          → Create a new customer
+GET    /customers          → Get all customers
+GET    /customers/{id}     → Get customer by ID
+PUT    /customers/{id}     → Update customer
+DELETE /customers/{id}     → Delete customer
 
----
-
-### Customer Service Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/customers` | Create a new customer profile |
-| `GET` | `/customers/{id}` | Get customer by ID |
-| `GET` | `/customers` | Get all customers |
-| `PUT` | `/customers/{id}` | Update customer details |
-| `DELETE` | `/customers/{id}` | Delete a customer |
-
----
-
-### Accounts Service Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/accounts` | Create a new bank account |
-| `GET` | `/accounts/{id}` | Get account details by ID |
-| `GET` | `/accounts/customer/{customerId}` | Get all accounts for a customer |
-| `PUT` | `/accounts/{id}` | Update account information |
-| `DELETE` | `/accounts/{id}` | Close/delete an account |
-
----
-
-### Transaction Service Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/transactions` | Record a new transaction |
-| `GET` | `/transactions/{id}` | Get transaction by ID |
-| `GET` | `/transactions/account/{accountId}` | Get transaction history for an account |
-
----
-
-### Sample Request Flow
-
-```bash
-# 1. Register / Login to get JWT
-curl -X POST http://localhost:8085/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"password"}'
-
-# 2. Create a customer (use token from step 1)
-curl -X POST http://localhost:8085/customers \
-  -H "Authorization: Bearer <your_jwt_token>" \
-  -H "Content-Type: application/json" \
-  -d '{"name":"John Doe","email":"john@example.com","phone":"9876543210"}'
-
-# 3. Create a bank account for the customer
-curl -X POST http://localhost:8085/accounts \
-  -H "Authorization: Bearer <your_jwt_token>" \
-  -H "Content-Type: application/json" \
-  -d '{"customerId":1,"accountType":"SAVINGS","balance":10000.00}'
-
-# 4. Record a transaction
-curl -X POST http://localhost:8085/transactions \
-  -H "Authorization: Bearer <your_jwt_token>" \
-  -H "Content-Type: application/json" \
-  -d '{"accountId":1,"type":"CREDIT","amount":5000.00,"description":"Salary"}'
+Sample Request Body (POST /customers):
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "phone": "9876543210"
+}
 ```
 
 ---
 
-## 🌐 Service Ports & Access Points
+### Accounts Service
 
-| Service | Host Port | URL |
+```
+POST   /accounts                        → Create a new bank account
+GET    /accounts/{id}                   → Get account by ID
+GET    /accounts/customer/{customerId}  → Get all accounts for a customer
+PUT    /accounts/{id}                   → Update account
+DELETE /accounts/{id}                   → Delete account
+
+Sample Request Body (POST /accounts):
+{
+  "customerId": 1,
+  "accountType": "SAVINGS",
+  "balance": 10000.00
+}
+```
+
+---
+
+### Transaction Service
+
+```
+POST   /transactions                    → Record a transaction
+GET    /transactions/{id}              → Get transaction by ID
+GET    /transactions/account/{accountId} → Get transaction history
+
+Sample Request Body (POST /transactions):
+{
+  "accountId": 1,
+  "type": "CREDIT",
+  "amount": 5000.00,
+  "description": "Salary credit"
+}
+```
+
+---
+
+## 🗄️ Database
+
+MySQL 8 runs on port `3307`. On first startup, Docker automatically runs `mysql-init/init.sql` which creates all required schemas — no manual DB setup needed.
+
+Each service owns its own schema and never touches another service's data:
+
+| Schema | Owned By |
+|---|---|
+| `auth_db` | Auth Service |
+| `customer_db` | Customer Service |
+| `accounts_db` | Accounts Service |
+| `transaction_db` | Transaction Service |
+
+---
+
+## ⭐ Project Rating
+
+> Evaluated as a **3-year experienced Java developer** — honest, detailed, and fair.
+
+| Dimension | Score | Remarks |
 |---|---|---|
-| **API Gateway** (main entry) | `8085` | `http://localhost:8085` |
-| **Eureka Dashboard** | `8761` | `http://localhost:8761` |
-| **MySQL Database** | `3307` | `localhost:3307` |
-| Auth Service | Dynamic | Routed via Gateway |
-| Customer Service | Dynamic | Routed via Gateway |
-| Accounts Service | Dynamic | Routed via Gateway |
-| Transaction Service | Dynamic | Routed via Gateway |
+| Architecture Design | 7.5 / 10 | Correct service split, Gateway + Eureka pattern is solid |
+| Tech Stack | 7.0 / 10 | Latest Spring Boot 3.2.5 + Java 17 — up to date |
+| Security | 5.0 / 10 | JWT auth works, but no rate limiting or HTTPS |
+| CI/CD & DevOps | 7.5 / 10 | Jenkins + Docker Hub + AWS EC2 — real automated pipeline |
+| Resilience | 3.0 / 10 | No circuit breakers — one service down can cascade |
+| Observability | 2.0 / 10 | No distributed tracing (Zipkin) or centralized logging |
+| Testing | 2.0 / 10 | No unit or integration tests visible in the repo |
+| Code Quality | 6.0 / 10 | Clean structure, but no Swagger docs or config server |
 
-> All business API calls go through `http://localhost:8085` only.  
-> Business services do not expose ports directly — they register with Eureka and are discovered dynamically.
+### 🏆 Overall: 6.8 / 10
 
----
+**What moved the needle up from 6.1 → 6.8:**
+The Jenkins CI/CD pipeline with Docker Hub + AWS EC2 deployment is a genuine production skill. Most portfolio projects never leave localhost. Yours is live on the cloud with automated deployments — that is a meaningful differentiator.
 
-## 🗄️ Database Schema
+**What's still holding it back from 8+:**
+Three things — no tests, no circuit breakers (Resilience4j), and no distributed tracing (Zipkin). Add these three and the score jumps above 8 immediately. They are also the first questions a senior developer will ask in an interview.
 
-MySQL 8 runs on port `3307`. On first container startup, the `mysql-init/` scripts automatically create all required schemas and tables — zero manual setup needed.
-
-Each microservice owns its own schema:
-
-| Schema | Owned By | Tables |
-|---|---|---|
-| `customer_db` | Customer Service | `customers` |
-| `accounts_db` | Accounts Service | `accounts` |
-| `transaction_db` | Transaction Service | `transactions` |
-| `auth_db` | Auth Service | `users` |
-
-> Services never access each other's schemas. Inter-service data is fetched via REST API calls — enforcing loose coupling.
-
----
-
-## 💡 Key Design Decisions
-
-**Why a dedicated Auth Service?**  
-Centralizes all authentication logic in one place. JWT tokens are issued here and validated at the gateway — downstream services remain stateless and free of auth concerns.
-
-**Why Netflix Eureka for Service Discovery?**  
-Services register by name, not IP. When a service restarts, its IP can change — Eureka handles this transparently. The API Gateway resolves `account-service` to whatever IP Eureka has registered, with no config changes.
-
-**Why Docker Bridge Network (`banking-network`)?**  
-All containers communicate using service names as hostnames (e.g., `mysql`, `discovery-server`). This eliminates IP dependencies entirely and mirrors real Kubernetes pod networking behavior.
-
-**Why Maven Multi-Module with Parent POM?**  
-Spring Boot `3.2.5` and Spring Cloud `2023.0.1` must be compatible with each other. Managing this in one parent POM guarantees all 6 services use matching versions — preventing the classic "dependency hell" in multi-service Java projects.
-
-**Why Dockerfile per Service?**  
-Each service builds its own image independently. This enables selective rebuilds — changing `accounts-service` code only rebuilds that image, not all 6. It also mirrors real CI/CD pipelines where each service has its own build and deploy lifecycle.
-
-**Why MySQL Init Scripts?**  
-Placing SQL scripts in `mysql-init/` means Docker mounts them as `docker-entrypoint-initdb.d` — MySQL auto-executes them on first run. The entire database setup is code, not manual steps.
-
----
-
-## ⚙️ Configuration
-
-### Environment Variables (docker-compose.yml)
-
-| Variable | Service | Value |
-|---|---|---|
-| `MYSQL_ROOT_PASSWORD` | MySQL | `root` |
-| `SPRING_DATASOURCE_URL` | Business Services | `jdbc:mysql://mysql:3306/<schema>` |
-| `EUREKA_CLIENT_SERVICEURL` | All Services | `http://discovery-server:8761/eureka` |
-
-> 🔒 **For production use**, move all credentials to a `.env` file and reference them as `${VARIABLE}` in `docker-compose.yml`. Never commit real credentials to source control.
-
----
-
-## 🗺️ Roadmap
-
-The following enhancements are planned to evolve this into a fully production-grade system:
-
-- [ ] **Resilience4j Circuit Breakers** — Prevent cascade failures when a service is slow or down
-- [ ] **Spring Cloud Config Server** — Centralized configuration management backed by Git
-- [ ] **Micrometer + Zipkin** — Distributed tracing to follow requests across all services
-- [ ] **Apache Kafka** — Event-driven transaction processing (replace synchronous REST for txns)
-- [ ] **Springdoc OpenAPI** — Auto-generate Swagger UI for all services
-- [ ] **Redis Caching** — Cache frequently accessed customer/account data
-- [ ] **GitHub Actions CI/CD** — Automated build, test, and Docker image push pipeline
-- [ ] **Kubernetes Deployment** — Helm charts to deploy on K8s with native service discovery
-- [ ] **ELK Stack** — Centralized log aggregation (Elasticsearch + Logstash + Kibana)
-- [ ] **AI Fraud Detection** — ML microservice for real-time transaction anomaly detection
+**Honest bottom line:** For a 3-year developer, this is a good project. The architecture thinking is correct, the stack is modern, and you've shipped it to production. The gap between where you are and a truly impressive project is narrow — testing, resilience, and observability are the bridge.
 
 ---
 
 ## 👨‍💻 Author
 
-**Shyam Talagapu**  
-Java Backend Developer | Spring Boot | Microservices | Cloud-Native
+**Shyam Talagapu** — Java Backend Developer
 
 [![GitHub](https://img.shields.io/badge/GitHub-shyamtalagapu-181717?style=flat-square&logo=github)](https://github.com/shyamtalagapu)
-
----
-
-<div align="center">
-
-⭐ If this project helped you understand Spring Boot microservices, give it a star!
-
-</div>
