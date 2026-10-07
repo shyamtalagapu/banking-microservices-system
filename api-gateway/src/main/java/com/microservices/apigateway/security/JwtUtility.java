@@ -12,7 +12,6 @@ import io.jsonwebtoken.security.Keys;
 @Component
 public class JwtUtility {
 
-    // FIX: Read secret from config instead of hardcoding it in source
     @Value("${jwt.secret}")
     private String secretKey;
 

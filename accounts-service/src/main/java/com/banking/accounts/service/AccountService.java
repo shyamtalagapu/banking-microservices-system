@@ -1,6 +1,8 @@
 package com.banking.accounts.service;
 
 import java.math.BigDecimal;
+
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -19,126 +21,146 @@ import com.banking.accounts.config.CustomerFeign;
 import com.banking.accounts.dto.AccountCreationDto;
 import com.banking.accounts.dto.AccountCreationResponse;
 import com.banking.accounts.entity.Account;
+import com.banking.accounts.exception.AccountDetailsException;
 import com.banking.accounts.exception.AccountDetailsNotFound;
 import com.banking.accounts.exception.CustomerNotFoundException;
 import com.banking.accounts.exception.InsufficientBalanceException;
+import com.banking.accounts.kafkaproducer.AccountEventProducer;
+//import com.banking.accounts.kafkaproducer.AccountEventProducer;
+import com.banking.accounts.notification.service.NotificationService;
 import com.banking.accounts.repository.AccountRepository;
 import com.banking.accounts.service.client.TransactionClient;
 import com.banking.accounts.service.dto.TransactionRequest;
 import com.banking.accounts.service.dto.TransactionResponse;
+import com.banking.common.events.events.MoneyDepositedEvent;
 
 import jakarta.transaction.Transactional;
 
 @Service
 public class AccountService {
-	
-	private static final Logger LOGGER= LoggerFactory.getLogger(AccountService.class);
-	
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(AccountService.class);
+
 	private final AccountRepository accountRepository;
 	private final TransactionClient transactionClient;
 	private final RestTemplate restTemplate;
 	private final CustomerFeign customerFeign;
+	private final AccountEventProducer accountEventProducer;
+	private final NotificationService notificationService;
 
-
-	
+//	private static final Logger LOGGER2 = LoggerFactory.getLogger(AccountEventProducer.class);
 
 	public AccountService(AccountRepository accountRepository, TransactionClient transactionClient,
-			RestTemplate restTemplate, CustomerFeign customerFeign) {
+			RestTemplate restTemplate, CustomerFeign customerFeign, AccountEventProducer accountEventProducer,
+			NotificationService notificationService) {
 		super();
 		this.accountRepository = accountRepository;
 		this.transactionClient = transactionClient;
 		this.restTemplate = restTemplate;
 		this.customerFeign = customerFeign;
+		this.accountEventProducer = accountEventProducer;
+		this.notificationService = notificationService;
 	}
 
+	
 	@Transactional
-    public AccountCreationResponse createAccount(AccountCreationDto accountCreationDto) {
+	public AccountCreationResponse createAccount(AccountCreationDto accountCreationDto) {
 		// Validating the customer
-		String url= "http://customer-service/customers/customer/"+accountCreationDto.getCustomerId();
-		
+		String url = "http://customer-service/customers/customer/" + accountCreationDto.getCustomerId();
+
 		try {
-			Object response= restTemplate.getForObject(url,Object.class);
-			LOGGER.info("Service Call TO CUSTOMER Srvice"+response);
+			Object response = restTemplate.getForObject(url, Object.class);
+			LOGGER.info("Service Call TO CUSTOMER Srvice" + response);
 		} catch (Exception e) {
-			throw new CustomerNotFoundException("Customer not found with this Id :"+accountCreationDto.getCustomerId());
+			throw new CustomerNotFoundException(
+					"Customer not found with this Id :" + accountCreationDto.getCustomerId());
 		}
-		Account account= new Account(accountCreationDto.getCustomerId(),accountCreationDto.getAccountId(), accountCreationDto.getAccountName(),accountCreationDto.getIfscCode(), accountCreationDto.getBankBranch());	
-		LOGGER.info("Acount: "+account);
+		Account account = new Account(accountCreationDto.getCustomerId(), accountCreationDto.getAccountId(),
+				accountCreationDto.getAccountName(), accountCreationDto.getIfscCode(),
+				accountCreationDto.getBankBranch());
+		LOGGER.info("Acount: " + account);
 		accountRepository.save(account);
-		AccountCreationResponse accountCreationResponse= new AccountCreationResponse(accountCreationDto.getAccountId(),accountCreationDto.getCustomerId(),
-				account.getBalance(),account.getAccountStatus(),account.getCreatedAt());
+		AccountCreationResponse accountCreationResponse = new AccountCreationResponse(accountCreationDto.getAccountId(),
+				accountCreationDto.getCustomerId(), account.getBalance(), account.getAccountStatus(),
+				account.getCreatedAt());
 		return accountCreationResponse;
-    }
+	}
+
+	
 
 	@Transactional
 	public void creditAmmount(Long accountId, BigDecimal amount) {
-		Account accountDetails= accountRepository.findByIdOrUpdate(accountId);
-		if (accountDetails.getAccountStatus().equalsIgnoreCase("ACTIVE")) {
-			accountDetails.setBalance(accountDetails.getBalance().add(amount));
-		}else {
-			throw new RuntimeException("Please Activate the account to deposit the amount");	
+		if(amount.compareTo(BigDecimal.ZERO) ==0) {
+			throw new AccountDetailsException("Please Deposit Valid Ampount");
 		}
-		
+			
+		Account accountDetails = accountRepository.findByIdOrUpdate(accountId);
+		if (!"ACTIVE".equalsIgnoreCase(accountDetails.getAccountStatus())) {
+            throw new AccountDetailsException("Please activate the account to deposit the amount.");
+        }
+
+        accountDetails.setBalance(accountDetails.getBalance().add(amount));
+			// Calling a Kafka Event
+//			Deposit Request ->Validate->Update Balance->Save Database->Create Event->Publish Kafka->Return Response
+        LOGGER.info("Triggering Kafka Event to Transaction Service ");
+			MoneyDepositedEvent depositedEvent = new MoneyDepositedEvent(accountId, amount);
+			accountEventProducer.publishMoneyDepositedEvent(depositedEvent);
+
 		
 	}
-	
+
 	@Transactional
 	public void debitAmount(Long accountId, BigDecimal amount) {
-		Account accountDetails= accountRepository.findByIdOrUpdate(accountId);
+		Account accountDetails = accountRepository.findByIdOrUpdate(accountId);
 		if (accountDetails.getAccountStatus().equalsIgnoreCase("ACTIVE")) {
-			if (accountDetails.getBalance().compareTo(amount)<0) {
+			if (accountDetails.getBalance().compareTo(amount) < 0) {
 				throw new InsufficientBalanceException();
 			}
 			accountDetails.setBalance(accountDetails.getBalance().subtract(amount));
-		}else {
+		} else {
 			throw new RuntimeException("Please Activate the account to debit the amount");
 		}
-		
-		
-		
+
 	}
-	
+
 	public Account fetchAccountDetails(Long accountId) {
-		Account account= accountRepository.findByAccountId(accountId).
-				orElseThrow(()->new AccountDetailsNotFound());
+		Account account = accountRepository.findByAccountId(accountId).orElseThrow(() -> new AccountDetailsNotFound());
 		return account;
 	}
-	
+
 	public List<Account> getAccountsByEmail(String email) {
 
-	    // call customer-service OR map email → customerId
-	    Long customerId = getCustomerIdFromEmail(email);
-        List<Account> accounts = accountRepository.findByCustomerId(customerId);
-	    List<Account> activeAccounts= accounts.stream().filter(account->account.getAccountStatus()
-	    		.equals("ACTIVE")).
-	    collect(Collectors.toList());
-	    return activeAccounts;
+		// call customer-service OR map email → customerId
+		Long customerId = getCustomerIdFromEmail(email);
+		List<Account> accounts = accountRepository.findByCustomerId(customerId);
+		List<Account> activeAccounts = accounts.stream().filter(account -> account.getAccountStatus().equals("ACTIVE"))
+				.collect(Collectors.toList());
+		return activeAccounts;
 	}
+
 	private Long getCustomerIdFromEmail(String email) {
-	    return customerFeign.getCustomerIdByEmail(email);
+		return customerFeign.getCustomerIdByEmail(email);
 	}
-	
-    public Account approveAccount(Long accountId) {
 
-		Account account= accountRepository.findByAccountId(accountId).
-				orElseThrow(()->new AccountDetailsNotFound());
-               
-        if ("ACTIVE".equalsIgnoreCase(account.getAccountStatus())) {
-            throw new RuntimeException("Account is already active");
-        }
+	public Account approveAccount(Long accountId) {
 
-        account.setAccountStatus("ACTIVE");
+		Account account = accountRepository.findByAccountId(accountId).orElseThrow(() -> new AccountDetailsNotFound());
 
-        return accountRepository.save(account);
-    }
-   
-    public void deleteAccount(Long accountId) {
+		if ("ACTIVE".equalsIgnoreCase(account.getAccountStatus())) {
+			throw new RuntimeException("Account is already active");
+		}
 
-        Account account = accountRepository.findByAccountId(accountId)
-                .orElseThrow(() -> new AccountDetailsNotFound());
+		account.setAccountStatus("ACTIVE");
 
-        accountRepository.delete(account);
-    }
+		return accountRepository.save(account);
+	}
+
+	public void deleteAccount(Long accountId) {
+
+		Account account = accountRepository.findByAccountId(accountId).orElseThrow(() -> new AccountDetailsNotFound());
+
+		accountRepository.delete(account);
+	}
 	/*
 	 * @Transactional public void transferMoney(Long fromId, Long toId, BigDecimal
 	 * amount) { if (fromId.equals(toId)) { throw new
@@ -154,76 +176,60 @@ public class AccountService {
 	 * accountB.setBalance(accountB.getBalance().add(amount)); }
 	 * 
 	 */
-	
-	
+
 	public void compensateDebit(Long fromAccntId, BigDecimal amount) {
 		try {
 			LOGGER.warn("Compensating debit for account {}", fromAccntId);
-			Account account= accountRepository.findById(fromAccntId).orElseThrow();
+			Account account = accountRepository.findById(fromAccntId).orElseThrow();
 			account.setBalance(account.getBalance().add(amount));
 			accountRepository.save(account);
 			LOGGER.warn("Compensated sucessfully for account {}", fromAccntId);
 
-		}
-		catch (Exception e) {
-			LOGGER.error("compensate debit exception : "+e.getMessage());
+		} catch (Exception e) {
+			LOGGER.error("compensate debit exception : " + e.getMessage());
 		}
 	}
-	
+
 	@Transactional
 	public TransactionResponse transferAmmountSagaImplementation(Long fromId, Long toId, BigDecimal amount) {
 		LOGGER.info("Saga Started. Transaction PROCESS: ");
-		//creating a transfer request (Ledger entry)
-		TransactionRequest request= new TransactionRequest();
+		// creating a transfer request (Ledger entry)
+		TransactionRequest request = new TransactionRequest();
 		request.setFromAccountId(fromId);
 		request.setToAccountId(toId);
 		request.setAmount(amount);
 		request.setReferenceId(UUID.randomUUID().toString());
 		LOGGER.info("SAGA CONTINUED ");
-		
-		
-	    // Call transaction-service → create PENDING record
-		
-		TransactionResponse response= transactionClient.createPending(request);
+
+		// Call transaction-service → create PENDING record
+
+		TransactionResponse response = transactionClient.createPending(request);
 		try {
-			LOGGER.info("Saga Started. Transaction ID: "
-                + response.getId());
-			 
-			 debitAmount(fromId, amount);
-			 LOGGER.info("Saga worked. Debit Successfull ID: "
-		                + response.getId());
-			 creditAmmount(toId,amount);
-			 LOGGER.info("Saga worked. credit Successfull ID: "
-		                + response.getId());
-			 //making the transaction successfull
-			 transactionClient.markSuccess(response.getId());
-			 LOGGER.info("Saga worked. update Successfull ID: "
-		                + response.getId());
-			 return new TransactionResponse(response.getId(),"SUCCESS",request.getReferenceId(),"Amount Transfer successful");
-			 
+			LOGGER.info("Saga Started. Transaction ID: " + response.getId());
+
+			debitAmount(fromId, amount);
+			LOGGER.info("Saga worked. Debit Successfull ID: " + response.getId());
+			creditAmmount(toId, amount);
+			LOGGER.info("Saga worked. credit Successfull ID: " + response.getId());
+			// making the transaction successfull
+			transactionClient.markSuccess(response.getId());
+			LOGGER.info("Saga worked. update Successfull ID: " + response.getId());
+			notificationService.notifyTransferSuccess(response.getId(), fromId, toId, amount);
+			return new TransactionResponse(response.getId(), "SUCCESS", request.getReferenceId(),
+					"Amount Transfer successful");
+
 		} catch (Exception e) {
 			// TODO: handle exception
-			LOGGER.error("Saga failed. Transaction failed: "
-	                + response.getId());
+			LOGGER.error("Saga failed. Transaction failed: " + response.getId());
 			transactionClient.markFailed(response.getId());
-			LOGGER.error("Saga failed. updated with fail: "
-	                + response.getId());
-			//Reverse Debit
+			LOGGER.error("Saga failed. updated with fail: " + response.getId());
+			// Reverse Debit
 			compensateDebit(fromId, amount);
 			transactionClient.markTransactionCompensated(response.getId());
 			// IMPORTANT → rethrow so DB rollback happens
-			return new TransactionResponse(
-	                response.getId(),
-	                "FAILED",
-	                request.getReferenceId(),
-	                e.getMessage()
-	        );
+			return new TransactionResponse(response.getId(), "FAILED", request.getReferenceId(), e.getMessage());
 		}
 
-		
-		
 	}
-	
-	
 
 }

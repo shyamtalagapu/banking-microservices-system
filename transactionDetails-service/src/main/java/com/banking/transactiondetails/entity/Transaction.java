@@ -32,19 +32,20 @@ public class Transaction {
 	    private String referenceId;
 
 	    private LocalDateTime createdAt;
-
+	   
 	    public Transaction() {}
 
 	    public Transaction(Long from,
 	                             Long to,
 	                             BigDecimal amount,
-	                             String referenceId) {
+	                             String referenceId, String transactionType) {
 	        this.fromAccountId = from;
 	        this.toAccountId = to;
 	        this.amount = amount;
 	        this.status = TransactionStatus.PENDING;
 	        this.referenceId = referenceId;
 	        this.createdAt = LocalDateTime.now();
+	       
 	    }
 
 		public Long getId() {
@@ -104,9 +105,7 @@ public class Transaction {
 		public void setCreatedAt(LocalDateTime createdAt) {
 			this.createdAt = createdAt;
 		}
-	    
-	    
-	    
+
 	    
 	
 }

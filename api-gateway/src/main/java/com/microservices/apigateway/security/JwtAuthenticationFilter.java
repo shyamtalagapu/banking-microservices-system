@@ -48,10 +48,6 @@ public class JwtAuthenticationFilter implements GlobalFilter {
 
         String token = authHeader.substring(7);
 
-        // FIX: Validate token FIRST before any claim extraction.
-        // Previously, extractUserRole() was called before validateToken() with no
-        // try-catch — a malformed/expired token caused parseClaimsJws() to throw
-        // an unhandled exception, resulting in the 500 error.
         try {
             if (!jwtUtil.validateToken(token)) {
                 return unauthorized(exchange, "Invalid or expired token");
@@ -100,7 +96,6 @@ public class JwtAuthenticationFilter implements GlobalFilter {
         return chain.filter(exchange);
     }
 
-    // FIX: unauthorized() now writes a JSON body, consistent with forbidden()
     private Mono<Void> unauthorized(ServerWebExchange exchange, String message) {
         exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
         exchange.getResponse().getHeaders().add("Content-Type", "application/json");

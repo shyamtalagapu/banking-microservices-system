@@ -41,6 +41,7 @@
     <module>discovery-server</module>
     <module>api-gateway</module>
     <module>auth-service</module>
+    <module>banking-common-events</module>
   </modules>
 
 </project>

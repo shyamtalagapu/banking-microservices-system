@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import com.banking.common.events.events.MoneyDepositedEvent;
 import com.banking.transactiondetails.entity.Transaction;
 import com.banking.transactiondetails.model.TransactionStatus;
 import com.banking.transactiondetails.repository.TransactionDetailsRepository;
@@ -30,7 +31,7 @@ public class TransactionService {
             String ref) {
 
         return repo.save(
-            new Transaction(from, to, amount, ref)
+            new Transaction(from, to, amount, ref,"TRANSFER")
         );
     }
 
@@ -58,6 +59,17 @@ public class TransactionService {
     	transaction.setStatus(TransactionStatus.COMPENSATED);
     	repo.save(transaction);
     	LOGGER.info("TRANSACTION STATUS COMPENSATED SUCCESSFULLY");
+    	
+    }
+    
+    
+    public void recordMoneyDepositedEvent(MoneyDepositedEvent depositedEvent) {
+    	LOGGER.info("Received DepostedEvent : "+depositedEvent);
+//    	Transaction transaction= new Transaction();
+//    	transaction.setAmount(depositedEvent.getAmount());
+//    	transaction.setToAccountId(depositedEvent.getAccountId());
+//    	transaction.setTransactionType("DEPOSIT");
+//    	repo.save(transaction);
     	
     }
 }
